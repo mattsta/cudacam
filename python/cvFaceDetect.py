@@ -20,6 +20,11 @@ def get_video():
     m = get_video() #cv.QueryFrame(capture)
 
 cascade = cv.Load(base + '../priv/haarcascade_frontalface_alt.xml')
+
+# expand found face height boundary by expansion:
+expansion = 10
+height_offset=15
+
 def detect(image):
     image_size = cv.GetSize(image)
 
@@ -33,20 +38,37 @@ def detect(image):
     # detections
     faces = cv.HaarDetectObjects(grayscale, cascade,
               cv.CreateMemStorage(), 1.2, 2,
-              cv.CV_HAAR_DO_CANNY_PRUNING, (50, 50))
+              cv.CV_HAAR_DO_CANNY_PRUNING, (15, 15))
 
     if faces:
         print 'face detected!'
-        for (x, y, w, h), n in faces:
-            cv.Rectangle(image, (x, y), (x+w, y+h),
+        for faceN, ((x, y, w, h), n) in enumerate(faces):
+            y_offset = y - height_offset
+            h_expanded = h + expansion
+            if y_offset < 0:
+                y_offset = 0
+
+            windowName = "Face %d" % faceN
+            sub = cv.GetSubRect(image, (x, y_offset, w, h_expanded+height_offset))
+            grow = cv.CreateMat(h_expanded*4, w*4, cv.CV_8UC3)
+            cv.Resize(sub, grow)
+            print "Showing for ", windowName
+            cv.ShowImage(windowName, grow)
+#                cv.ShowImage("Face at (%d, %d)" % (x, y), grow)
+            cv.Rectangle(image, (x, y-height_offset), (x+w, y+h+expansion),
                          cv.RGB(0, 255, 0), 3, 8, 0)
+
 
 
 while True:
     frame = get_video()
 
+    # scale down the 640x480 kinect to half size for quicker processing
+    shrunk = cv.CreateMat(240, 320, cv.CV_8UC3)
+    cv.Resize(frame, shrunk)
+
 #    cv.Flip(frame, None, 1)
-    detect(frame)
-    cv.ShowImage("Bob", frame)
+    detect(shrunk)
+    cv.ShowImage("Bob", shrunk)
 
     k = cv.WaitKey(10)
