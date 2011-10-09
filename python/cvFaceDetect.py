@@ -17,13 +17,13 @@ def get_depth():
 def get_video():
     return frame_convert.video_cv(freenect.sync_get_video()[0])
 
-    m = get_video() #cv.QueryFrame(capture)
-
 cascade = cv.Load(base + '../priv/haarcascade_frontalface_alt.xml')
 
 # expand found face height boundary by expansion:
 expansion = 10
 height_offset=15
+FRAME_WIDTH=320
+FRAME_HEIGHT=240
 
 def detect(image):
     image_size = cv.GetSize(image)
@@ -45,11 +45,15 @@ def detect(image):
         for faceN, ((x, y, w, h), n) in enumerate(faces):
             y_offset = y - height_offset
             h_expanded = h + expansion
+            h_expanded_offset = h_expanded + height_offset
+            if y_offset + h_expanded_offset > FRAME_HEIGHT:
+                h_expanded_offset = (y_offset + h_expanded_offset) - FRAME_HEIGHT
+
             if y_offset < 0:
                 y_offset = 0
 
             windowName = "Face %d" % faceN
-            sub = cv.GetSubRect(image, (x, y_offset, w, h_expanded+height_offset))
+            sub = cv.GetSubRect(image, (x, y_offset, w, h_expanded_offset))
             grow = cv.CreateMat(h_expanded*4, w*4, cv.CV_8UC3)
             cv.Resize(sub, grow)
             print "Showing for ", windowName
@@ -64,7 +68,7 @@ while True:
     frame = get_video()
 
     # scale down the 640x480 kinect to half size for quicker processing
-    shrunk = cv.CreateMat(240, 320, cv.CV_8UC3)
+    shrunk = cv.CreateMat(FRAME_HEIGHT, FRAME_WIDTH, cv.CV_8UC3)
     cv.Resize(frame, shrunk)
 
 #    cv.Flip(frame, None, 1)
